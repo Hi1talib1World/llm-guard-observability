@@ -1,0 +1,86 @@
+name: Automated CI/CD Pipeline & Grafana Schema Verification
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*.*.*'
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  lint-and-coverage:
+    name: Linting, Type Checks & Pytest Coverage Gate (>=90%)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Build & Test Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install ruff mypy pytest pytest-cov build
+          pip install -e .
+
+      - name: Ruff Code Formatting Check
+        run: |
+          ruff check src/
+          ruff format --check src/
+
+      - name: Mypy Static Type Analysis
+        run: mypy src/ --ignore-missing-imports
+
+      - name: Pytest Automated Coverage Gate (>=90%)
+        run: pytest --cov=src --cov-fail-under=90 tests/
+
+  grafana-schema-validation:
+    name: Grafana Dashboard JSON Integrity Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Validate Grafana Dashboard JSON Integrity
+        run: |
+          python -c "
+          import json, sys
+          dashboards = ['config/grafana_dashboard.json', 'config/grafana/dashboards/dashboard.json']
+          for d in dashboards:
+              with open(d, 'r') as f:
+                  data = json.load(f)
+                  assert 'panels' in data, f'Missing panels array in {d}'
+                  print(f'Successfully validated {d}')
+          "
+
+  build-and-publish:
+    name: Publish Package to PyPI on Tag Release
+    needs: [lint-and-coverage, grafana-schema-validation]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Build Wheel and Source Distribution
+        run: |
+          pip install build
+          python -m build
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1

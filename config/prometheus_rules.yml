@@ -1,0 +1,30 @@
+# Prometheus Alerting & Recording Rules for LLM Guard & Observability
+groups:
+  - name: llm_guard_alerts
+    rules:
+      - alert: HighP95LatencyAlert
+        expr: llm_guard_latency_p95_ms > 500
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High p95 Latency detected in LLM Gateway"
+          description: "LLM Gateway p95 latency is {{ $value }}ms, exceeding 500ms SLA target."
+
+      - alert: PromptInjectionSpikeAlert
+        expr: rate(llm_guard_injections_blocked_total[5m]) * 60 > 5
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Spike in Blocked Prompt Injections"
+          description: "Blocked prompt injection rate is {{ $value }} attacks/min."
+
+      - alert: CircuitBreakerTrippedAlert
+        expr: llm_guard_circuit_breaker_state == 1
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Primary LLM Model API Circuit Breaker Tripped"
+          description: "Primary LLM API error rate exceeded 2% threshold. Traffic failing over to secondary/cache."

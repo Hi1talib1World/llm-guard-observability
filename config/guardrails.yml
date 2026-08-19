@@ -1,0 +1,36 @@
+# LLM Guardrails Policy Configuration
+version: "1.0"
+
+guardrails:
+  latency_budget_ms: 15.0
+  prompt_injection:
+    enabled: true
+    sensitivity: high
+    patterns:
+      - "ignore previous instructions"
+      - "disregard system prompt"
+      - "developer mode enabled"
+      - "dan mode enabled"
+      - "override system rules"
+      - "reveal system prompt"
+  pii_redaction:
+    enabled: true
+    detectors:
+      - EMAIL
+      - PHONE
+      - SSN
+      - CREDIT_CARD
+    mask_format: "[{PII_TYPE}_{INDEX}]"
+  system_prompt_leak:
+    enabled: true
+    action: block
+    keywords:
+      - "system prompt:"
+      - "internal instructions:"
+      - "confidential system prompt"
+  toxicity_filter:
+    enabled: true
+    disallowed_keywords:
+      - "malicious_payload"
+      - "exploit_code"
+      - "hate_speech_keyword"

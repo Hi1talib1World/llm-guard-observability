@@ -1,0 +1,44 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": 1,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "title": "p95 / p99 Latency Overhead (ms)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [
+        { "expr": "llm_guard_latency_p95_ms", "legendFormat": "p95 Latency (ms)" },
+        { "expr": "llm_guard_latency_p99_ms", "legendFormat": "p99 Latency (ms)" }
+      ]
+    },
+    {
+      "title": "Token Consumption & Cost",
+      "type": "stat",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "targets": [
+        { "expr": "llm_guard_prompt_tokens_total", "legendFormat": "Prompt Tokens" },
+        { "expr": "llm_guard_completion_tokens_total", "legendFormat": "Completion Tokens" }
+      ]
+    },
+    {
+      "title": "Blocked Injections & PII Trigger Rate",
+      "type": "bar-gauge",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 8 },
+      "targets": [
+        { "expr": "llm_guard_injections_blocked_total", "legendFormat": "Blocked Injections" },
+        { "expr": "llm_guard_pii_redacted_total", "legendFormat": "PII Tokens Redacted" }
+      ]
+    }
+  ],
+  "refresh": "5s",
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": ["llm", "security", "observability"],
+  "time": { "from": "now-1h", "to": "now" },
+  "title": "LLM Guard & Observability Overview 🛡️📊"
+}
