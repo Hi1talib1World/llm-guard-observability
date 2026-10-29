@@ -6,8 +6,8 @@
 
 <p align="center">
   <a href="https://pypi.org/project/llm-guard-obs/"><img src="https://img.shields.io/badge/pypi-v1.0.0-blue.svg" alt="PyPI Version"/></a>
-  <a href="https://github.com/your-username/llm-guard-observability/actions/workflows/release.yml"><img src="https://github.com/your-username/llm-guard-observability/actions/workflows/release.yml/badge.svg" alt="CI/CD Release Pipeline"/></a>
-  <a href="https://github.com/your-username/llm-guard-observability"><img src="https://img.shields.io/badge/coverage-91.8%25-brightgreen.svg" alt="Code Coverage"/></a>
+  <a href="https://github.com/Hi1talib1World/llm-guard-observability/actions/workflows/ci-cd.yml"><img src="https://github.com/Hi1talib1World/llm-guard-observability/actions/workflows/ci-cd.yml/badge.svg" alt="CI/CD Pipeline"/></a>
+  <a href="https://github.com/Hi1talib1World/llm-guard-observability"><img src="https://img.shields.io/badge/coverage-90.6%25-brightgreen.svg" alt="Code Coverage"/></a>
   <a href="https://opentelemetry.io/"><img src="https://img.shields.io/badge/OpenTelemetry-W3C_TraceContext-purple.svg" alt="OpenTelemetry Enabled"/></a>
   <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"/></a>
 </p>
