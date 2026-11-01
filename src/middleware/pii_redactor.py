@@ -1,5 +1,5 @@
 import re
-from typing import Tuple, Dict
+
 
 class PIIRedactor:
     """High-performance PII detection (Regex + NER mapping) and restoration engine."""
@@ -8,10 +8,10 @@ class PIIRedactor:
         "EMAIL": re.compile(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}", re.IGNORECASE),
         "PHONE": re.compile(r"\b\d{3}[-.]?\d{3}[-.]?\d{4}\b"),
         "SSN": re.compile(r"\b\d{3}-\d{2}-\d{4}\b"),
-        "CREDIT_CARD": re.compile(r"\b(?:\d[ -]*?){13,16}\b")
+        "CREDIT_CARD": re.compile(r"\b(?:\d[ -]*?){13,16}\b"),
     }
 
-    def redact(self, text: str) -> Tuple[str, Dict[str, str]]:
+    def redact(self, text: str) -> tuple[str, dict[str, str]]:
         """Redacts PII tokens from text and returns (redacted_text, pii_mapping)."""
         sanitized = text
         mapping = {}
@@ -27,7 +27,7 @@ class PIIRedactor:
 
         return sanitized, mapping
 
-    def restore(self, text: str, mapping: Dict[str, str]) -> str:
+    def restore(self, text: str, mapping: dict[str, str]) -> str:
         """Restores original PII tokens into text."""
         restored = text
         for placeholder, original in mapping.items():

@@ -1,16 +1,16 @@
-import time
 import logging
+import time
 from collections import deque
-from typing import Dict, Any, Tuple, Optional
 
 logger = logging.getLogger("LLMGuard.CircuitBreaker")
+
 
 class SemanticCache:
     """In-memory Vector Semantic Cache for low-latency emergency fallback."""
 
     def __init__(self, distance_threshold: float = 0.08):
         self.distance_threshold = distance_threshold
-        self.cache: Dict[str, str] = {}
+        self.cache: dict[str, str] = {}
 
     def _simple_vector_sim(self, s1: str, s2: str) -> float:
         w1 = set(s1.lower().split())
@@ -20,7 +20,7 @@ class SemanticCache:
         jaccard = len(w1.intersection(w2)) / len(w1.union(w2))
         return 1.0 - jaccard
 
-    def get(self, query: str) -> Optional[str]:
+    def get(self, query: str) -> str | None:
         for cached_q, cached_resp in self.cache.items():
             dist = self._simple_vector_sim(query, cached_q)
             if dist <= self.distance_threshold:
@@ -58,13 +58,15 @@ class HighScaleCircuitBreaker:
         if self.state == "CLOSED" and error_rate > self.error_threshold_percent:
             self.state = "OPEN"
             self.last_state_change = time.time()
-            logger.warning(f"[CIRCUIT BREAKER OPEN] Error rate {error_rate:.2f}% > threshold {self.error_threshold_percent}%")
+            logger.warning(
+                f"[CIRCUIT BREAKER OPEN] Error rate {error_rate:.2f}% > threshold {self.error_threshold_percent}%"
+            )
         elif self.state == "OPEN" and time.time() - self.last_state_change > self.cool_off_seconds:
             self.state = "HALF-OPEN"
         elif self.state == "HALF-OPEN" and error_rate <= self.error_threshold_percent:
             self.state = "CLOSED"
 
-    def get_route(self, query: str) -> Tuple[str, Optional[str]]:
+    def get_route(self, query: str) -> tuple[str, str | None]:
         self._evaluate_state()
         if self.state in ("CLOSED", "HALF-OPEN"):
             return "PRIMARY", None

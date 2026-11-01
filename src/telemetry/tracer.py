@@ -1,22 +1,24 @@
+import logging
 import time
 import uuid
-import logging
 from dataclasses import dataclass, field
-from typing import Dict, Any, List, Optional
+from typing import Any
 
 logger = logging.getLogger("LLMGuard.Telemetry")
+
 
 @dataclass
 class OTelSpan:
     span_id: str
-    parent_span_id: Optional[str]
+    parent_span_id: str | None
     name: str
     kind: str
     start_time: float
-    end_time: Optional[float] = None
+    end_time: float | None = None
     status: str = "OK"
-    error: Optional[str] = None
-    attributes: Dict[str, Any] = field(default_factory=dict)
+    error: str | None = None
+    attributes: dict[str, Any] = field(default_factory=dict)
+
 
 @dataclass
 class TraceContext:
@@ -31,8 +33,9 @@ class TraceContext:
     ttft_ms: float = 0.0
     tpot_ms: float = 0.0
     total_latency_ms: float = 0.0
-    spans: List[OTelSpan] = field(default_factory=list)
+    spans: list[OTelSpan] = field(default_factory=list)
     traceparent: str = ""
+
 
 class MultiAgentTracer:
     """OpenTelemetry Tracer supporting W3C traceparent headers and multi-agent spans."""
@@ -40,13 +43,13 @@ class MultiAgentTracer:
     PRICING = {
         "openai/gpt-4o": (0.0025, 0.0100),
         "anthropic/claude-3-5-sonnet": (0.0030, 0.0150),
-        "local/llama-3-8b": (0.0001, 0.0001)
+        "local/llama-3-8b": (0.0001, 0.0001),
     }
 
     def __init__(self):
-        self.traces: Dict[str, TraceContext] = {}
+        self.traces: dict[str, TraceContext] = {}
 
-    def start_trace(self, tenant_id: str, provider: str, model: str) -> Tuple[str, str]:
+    def start_trace(self, tenant_id: str, provider: str, model: str) -> tuple[str, str]:
         trace_id = uuid.uuid4().hex
         root_span_id = uuid.uuid4().hex[:16]
         traceparent = f"00-{trace_id}-{root_span_id}-01"
@@ -57,13 +60,15 @@ class MultiAgentTracer:
             root_span_id=root_span_id,
             provider=provider,
             model=model,
-            traceparent=traceparent
+            traceparent=traceparent,
         )
-        ctx.spans.append(OTelSpan(span_id=root_span_id, parent_span_id=None, name="RootAgent", kind="AGENT", start_time=time.time()))
+        ctx.spans.append(
+            OTelSpan(span_id=root_span_id, parent_span_id=None, name="RootAgent", kind="AGENT", start_time=time.time())
+        )
         self.traces[trace_id] = ctx
         return trace_id, traceparent
 
-    def create_span(self, trace_id: str, name: str, kind: str, parent_span_id: Optional[str] = None) -> str:
+    def create_span(self, trace_id: str, name: str, kind: str, parent_span_id: str | None = None) -> str:
         ctx = self.traces.get(trace_id)
         if not ctx:
             return ""
@@ -73,7 +78,7 @@ class MultiAgentTracer:
         ctx.spans.append(OTelSpan(span_id=span_id, parent_span_id=parent, name=name, kind=kind, start_time=time.time()))
         return span_id
 
-    def end_span(self, trace_id: str, span_id: str, status: str = "OK", error: Optional[str] = None):
+    def end_span(self, trace_id: str, span_id: str, status: str = "OK", error: str | None = None):
         ctx = self.traces.get(trace_id)
         if not ctx:
             return
@@ -84,7 +89,9 @@ class MultiAgentTracer:
                 s.error = error
                 break
 
-    def finalize_trace(self, trace_id: str, c_in: int, c_out: int, ttft_ms: float, total_latency_ms: float) -> TraceContext:
+    def finalize_trace(
+        self, trace_id: str, c_in: int, c_out: int, ttft_ms: float, total_latency_ms: float
+    ) -> TraceContext:
         ctx = self.traces.get(trace_id)
         if not ctx:
             return TraceContext(trace_id=trace_id, tenant_id="unknown", root_span_id="", provider="", model="")

@@ -56,7 +56,7 @@ jobs:
           import json, sys
           dashboards = ['config/grafana_dashboard.json', 'config/grafana/dashboards/dashboard.json']
           for d in dashboards:
-              with open(d, 'r') as f:
+              with open(d, 'r', encoding='utf-8') as f:
                   data = json.load(f)
                   assert 'panels' in data, f'Missing panels array in {d}'
                   print(f'Successfully validated {d}')

@@ -1,11 +1,12 @@
 import asyncio
 import json
-import random
 import logging
-from dataclasses import dataclass, asdict
-from typing import Dict, Any, List, Optional
+import random
+from dataclasses import asdict, dataclass
+from typing import Any
 
 logger = logging.getLogger("LLMGuard.Evaluator")
+
 
 @dataclass
 class StructuredJudgeOutput:
@@ -17,16 +18,17 @@ class StructuredJudgeOutput:
     verdict: str
     evaluated_at: float
 
+
 class LLMJudgeEvaluator:
     """Async Continuous LLM-as-a-Judge Evaluation Pipeline."""
 
     def __init__(self, sample_rate: float = 0.10):
         self.sample_rate = sample_rate
         self.queue: asyncio.Queue = asyncio.Queue()
-        self.evaluations: List[StructuredJudgeOutput] = []
+        self.evaluations: list[StructuredJudgeOutput] = []
         self.is_running = False
 
-    async def enqueue(self, trace_id: str, prompt: str, response: str, context: Optional[str] = None):
+    async def enqueue(self, trace_id: str, prompt: str, response: str, context: str | None = None):
         if random.random() <= self.sample_rate:
             await self.queue.put({"trace_id": trace_id, "prompt": prompt, "response": response, "context": context})
 
@@ -38,12 +40,12 @@ class LLMJudgeEvaluator:
                 item = await asyncio.wait_for(self.queue.get(), timeout=1.0)
                 await self._evaluate(item)
                 self.queue.task_done()
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 continue
             except Exception as e:
                 logger.error(f"[LLM-AS-A-JUDGE] Worker error: {e}")
 
-    async def _evaluate(self, item: Dict[str, Any]):
+    async def _evaluate(self, item: dict[str, Any]):
         await asyncio.sleep(0.01)
         prompt, response, context = item["prompt"], item["response"], item.get("context")
 
@@ -68,12 +70,12 @@ class LLMJudgeEvaluator:
             hallucination_index=hallucination_index,
             reasoning_rationale=f"Evaluated relevance ({relevance:.2f}) and faithfulness ({faithfulness:.2f}).",
             verdict=verdict,
-            evaluated_at=asyncio.get_event_loop().time()
+            evaluated_at=asyncio.get_event_loop().time(),
         )
         self.evaluations.append(res)
         logger.info(f"[LLM-AS-A-JUDGE JSON RESULT] {json.dumps(asdict(res))}")
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         if not self.evaluations:
             return {"samples": 0, "avg_faithfulness": 1.0, "avg_relevance": 1.0, "avg_hallucination_index": 0.0}
         n = len(self.evaluations)
@@ -81,5 +83,5 @@ class LLMJudgeEvaluator:
             "samples": n,
             "avg_faithfulness": round(sum(e.faithfulness_score for e in self.evaluations) / n, 2),
             "avg_relevance": round(sum(e.answer_relevance_score for e in self.evaluations) / n, 2),
-            "avg_hallucination_index": round(sum(e.hallucination_index for e in self.evaluations) / n, 2)
+            "avg_hallucination_index": round(sum(e.hallucination_index for e in self.evaluations) / n, 2),
         }

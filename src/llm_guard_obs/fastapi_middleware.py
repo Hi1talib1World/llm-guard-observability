@@ -1,21 +1,23 @@
-import time
 import json
 import logging
-from typing import Callable, Optional
+import time
+from collections.abc import Callable
+
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 
+from src.llm_guard_obs.metrics import PrometheusMetricsExporter
 from src.middleware.guardrail_filter import GuardrailFilter
 from src.telemetry.tracer import MultiAgentTracer
-from src.evaluator.judge import LLMJudgeEvaluator
-from src.llm_guard_obs.metrics import PrometheusMetricsExporter
 
 logger = logging.getLogger("LLMGuardObs.FastAPIMiddleware")
+
 
 async def _async_body_generator(chunks):
     for chunk in chunks:
         yield chunk
+
 
 class LLMGuardMiddleware(BaseHTTPMiddleware):
     """
@@ -31,9 +33,9 @@ class LLMGuardMiddleware(BaseHTTPMiddleware):
     def __init__(
         self,
         app,
-        guardrail_filter: Optional[GuardrailFilter] = None,
-        tracer: Optional[MultiAgentTracer] = None,
-        metrics: Optional[PrometheusMetricsExporter] = None
+        guardrail_filter: GuardrailFilter | None = None,
+        tracer: MultiAgentTracer | None = None,
+        metrics: PrometheusMetricsExporter | None = None,
     ):
         super().__init__(app)
         self.guardrail_filter = guardrail_filter or GuardrailFilter()
@@ -64,12 +66,16 @@ class LLMGuardMiddleware(BaseHTTPMiddleware):
 
         if not is_valid:
             self.tracer.end_span(trace_id, guard_span, status="ERROR", error=err)
-            self.tracer.finalize_trace(trace_id, c_in=len(prompt.split()), c_out=0, ttft_ms=ing_ms, total_latency_ms=ing_ms)
-            self.metrics.record_request(ing_ms, prompt_tokens=len(prompt.split()), completion_tokens=0, blocked_injection=True)
+            self.tracer.finalize_trace(
+                trace_id, c_in=len(prompt.split()), c_out=0, ttft_ms=ing_ms, total_latency_ms=ing_ms
+            )
+            self.metrics.record_request(
+                ing_ms, prompt_tokens=len(prompt.split()), completion_tokens=0, blocked_injection=True
+            )
             return JSONResponse(
                 status_code=400,
                 content={"error": "Security Policy Violation", "details": err, "trace_id": trace_id},
-                headers={"traceparent": traceparent}
+                headers={"traceparent": traceparent},
             )
 
         self.tracer.end_span(trace_id, guard_span, status="OK")

@@ -1,19 +1,20 @@
-import sys
-import time
 import asyncio
 import logging
-from pathlib import Path
+import sys
+import time
 from contextlib import asynccontextmanager
+from pathlib import Path
+
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
-from src.middleware.guardrail_filter import GuardrailFilter
-from src.telemetry.tracer import MultiAgentTracer
 from src.evaluator.judge import LLMJudgeEvaluator
 from src.harness.resilience_circuit_breaker import HighScaleCircuitBreaker
+from src.middleware.guardrail_filter import GuardrailFilter
+from src.telemetry.tracer import MultiAgentTracer
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 logger = logging.getLogger("LLMGuard.Proxy")
@@ -23,6 +24,7 @@ tracer = MultiAgentTracer()
 judge_evaluator = LLMJudgeEvaluator(sample_rate=0.10)
 circuit_breaker = HighScaleCircuitBreaker(window_size=100, error_threshold_percent=2.0)
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     worker_task = asyncio.create_task(judge_evaluator.start_worker())
@@ -31,11 +33,9 @@ async def lifespan(app: FastAPI):
     judge_evaluator.is_running = False
     worker_task.cancel()
 
-app = FastAPI(
-    title="LLM Guard & Observability Harness 🛡️📊",
-    version="1.0.0",
-    lifespan=lifespan
-)
+
+app = FastAPI(title="LLM Guard & Observability Harness 🛡️📊", version="1.0.0", lifespan=lifespan)
+
 
 @app.post("/v1/chat/completions")
 async def chat_completions(request: Request):
@@ -65,7 +65,7 @@ async def chat_completions(request: Request):
         return JSONResponse(
             status_code=400,
             content={"error": "Security Policy Violation", "details": err, "trace_id": trace_id},
-            headers={"traceparent": traceparent}
+            headers={"traceparent": traceparent},
         )
 
     tracer.end_span(trace_id, guard_span, status="OK")
@@ -80,7 +80,7 @@ async def chat_completions(request: Request):
     else:
         provider_used = "openai" if route_type == "PRIMARY" else "anthropic"
         llm_span = tracer.create_span(trace_id, name=f"LLMInference:{provider_used}", kind="LLM")
-        
+
         simulated_success = not (body.get("induce_failure", False))
         circuit_breaker.record_request(simulated_success)
 
@@ -103,7 +103,7 @@ async def chat_completions(request: Request):
         return JSONResponse(
             status_code=422,
             content={"error": "Output Policy Violation", "details": out_err, "trace_id": trace_id},
-            headers={"traceparent": traceparent}
+            headers={"traceparent": traceparent},
         )
 
     tracer.end_span(trace_id, egress_span, status="OK")
@@ -122,19 +122,23 @@ async def chat_completions(request: Request):
             "provider_used": provider_used,
             "guardrail_ingress_ms": round(ing_ms, 2),
             "guardrail_egress_ms": round(eg_ms, 2),
-            "total_latency_ms": round(total_ms, 2)
+            "total_latency_ms": round(total_ms, 2),
         },
-        headers={"traceparent": traceparent}
+        headers={"traceparent": traceparent},
     )
+
 
 @app.get("/v1/telemetry/spans")
 async def get_telemetry_spans():
     return {"traces": [t.__dict__ for t in tracer.traces.values()]}
 
+
 @app.get("/v1/evaluations/stats")
 async def get_evaluations_stats():
     return judge_evaluator.get_stats()
 
+
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run("src.gateway.proxy:app", host="0.0.0.0", port=8000, reload=False)

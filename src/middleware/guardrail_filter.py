@@ -1,10 +1,11 @@
+import logging
 import re
 import time
-import logging
-from typing import Tuple, Dict, Optional
+
 from src.middleware.pii_redactor import PIIRedactor
 
 logger = logging.getLogger("LLMGuard.Middleware")
+
 
 class GuardrailFilter:
     """Sub-15ms Real-Time Guardrail Filter for Prompt Injections, System Leaks, and Toxicity."""
@@ -15,14 +16,14 @@ class GuardrailFilter:
         re.compile(r"you\s+are\s+now\s+in\s+developer\s+mode", re.IGNORECASE),
         re.compile(r"dan\s+mode\s+enabled", re.IGNORECASE),
         re.compile(r"override\s+system\s+rules", re.IGNORECASE),
-        re.compile(r"reveal\s+(your\s+)?system\s+prompt", re.IGNORECASE)
+        re.compile(r"reveal\s+(your\s+)?system\s+prompt", re.IGNORECASE),
     ]
 
     LEAK_PHRASES = [
         "system prompt:",
         "internal instructions:",
         "my core programming dictates",
-        "confidential system prompt"
+        "confidential system prompt",
     ]
 
     TOXIC_TERMS = ["malicious_payload", "exploit_code", "hate_speech_keyword"]
@@ -31,7 +32,7 @@ class GuardrailFilter:
         self.system_prompt = system_prompt.lower()
         self.pii_redactor = PIIRedactor()
 
-    def filter_ingress(self, prompt: str) -> Tuple[bool, str, Dict[str, str], float, Optional[str]]:
+    def filter_ingress(self, prompt: str) -> tuple[bool, str, dict[str, str], float, str | None]:
         """Scans input prompt for jailbreaks and performs PII redaction."""
         t0 = time.perf_counter()
 
@@ -48,7 +49,7 @@ class GuardrailFilter:
         latency_ms = (time.perf_counter() - t0) * 1000
         return True, sanitized, pii_map, latency_ms, None
 
-    def filter_egress(self, response_text: str, pii_map: Dict[str, str]) -> Tuple[bool, str, float, Optional[str]]:
+    def filter_egress(self, response_text: str, pii_map: dict[str, str]) -> tuple[bool, str, float, str | None]:
         """Scans output response for system leaks, toxicity, and restores PII."""
         t0 = time.perf_counter()
         lowered = response_text.lower()
